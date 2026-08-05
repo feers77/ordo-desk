@@ -1,7 +1,7 @@
 .PHONY: dev web check lint types test provision
 
 dev: ## BFF con recarga; sirve web/ en el mismo origen
-	uv run uvicorn ordo_desk.main:create_app --factory --reload --port 8100
+	PYTHONPATH=bff/src uv run uvicorn ordo_desk.main:create_app --factory --reload --port 8100
 
 web: ## Solo los estáticos, sin BFF
 	uv run python tools/serve_dev.py
