@@ -26,6 +26,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Fixed
 
+- `crypto.randomUUID` **solo existe en contextos seguros** (HTTPS o localhost). Servido en
+  una IP de la red local sobre HTTP plano no está definido, y el escritorio se caía justo al
+  cobrar, que es donde la clave de idempotencia hace falta. Se compone el UUID con
+  `crypto.getRandomValues`, disponible también en contextos no seguros: la aleatoriedad es
+  la misma. Es el segundo tropiezo del mismo tipo —después de la cookie `Secure`—, así que
+  ahora hay un test que apaga `randomUUID` y comprueba que igual funciona.
+- `tests/web/run_node.mjs`: corredor de los módulos puros del navegador bajo node. Cubre lo
+  que un test del BFF nunca vería: el identificador único y que el dinero no pase por coma
+  flotante.
+
 - Una edición dejó `import { ROUTES }` y `export const ROUTES` en el mismo archivo. Es un
   `SyntaxError`: el navegador no ejecuta nada y **la página queda en blanco, sin mensaje**.
   Llegó a estar publicado. Los tests del BFF no podían verlo porque nunca miran el

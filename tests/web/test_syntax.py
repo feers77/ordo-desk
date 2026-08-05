@@ -90,3 +90,24 @@ def test_every_import_resolves() -> None:
             if not candidate.is_file():
                 missing.append(f"{module.relative_to(WEB)} -> {target}")
     assert not missing, "Imports que no existen:\n  " + "\n  ".join(missing)
+
+
+def test_pure_modules_behave() -> None:
+    """Corre bajo node los módulos que no necesitan DOM ni import map.
+
+    Es donde vive lo que un test del BFF nunca vería: que el identificador
+    único no dependa de `crypto.randomUUID` —que solo existe en contextos
+    seguros— y que el dinero no pase por coma flotante.
+    """
+    binary = node()
+    if binary is None:
+        pytest.skip("node no disponible")
+    runner = Path(__file__).with_name("run_node.mjs")
+    result = subprocess.run(
+        [binary, str(runner), str(WEB)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    print(result.stdout)

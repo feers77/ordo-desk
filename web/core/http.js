@@ -8,11 +8,16 @@
  */
 
 import { bus } from "desk/core/bus.js";
+import { newKey } from "desk/core/ids.js";
 
 // Dos prefijos, uno por familia de rutas de ORDO. Leen igual que las suyas.
 const API = "/desk/api";
 const META = "/desk/meta";
 const MAX_RETRIES = 2;
+
+// Se reexporta para que las pantallas no tengan que conocer de dónde sale la
+// clave; lo único que les importa es acuñarla una vez por intención.
+export { newKey };
 
 /** Error con el contrato de ORDO, no una cadena suelta. */
 export class OrdoError extends Error {
@@ -29,11 +34,6 @@ export class OrdoError extends Error {
     this.field = error.field || "";
     this.currentState = error.current_state || null;
   }
-}
-
-/** Clave de idempotencia: la acuña quien sabe qué es una intención. */
-export function newKey() {
-  return `desk-${crypto.randomUUID()}`;
 }
 
 function query(params) {
