@@ -1,43 +1,15 @@
 /**
  * Router por hash y montaje de pantallas.
  *
- * Cada pantalla declara a qué personas sirve. No es cosmética: el capability
- * token del cajero no incluye reportes, así que mandarlo a la bodega produce un
- * 403 correcto y una pantalla rota. Quien no puede entrar a una pantalla no la
- * ve en el menú y no aterriza en ella por defecto.
+ * El catálogo de pantallas vive en `core/routes.js`, no aquí: el armazón lo
+ * necesita para pintar el menú y este módulo lo importa a él, así que tenerlo
+ * en cualquiera de los dos crearía un ciclo.
  */
 
 import { h, render } from "desk/core/dom.js";
 import { session as sessionApi } from "desk/core/http.js";
 import { shell, failure, loading } from "desk/ui/shell.js";
 import { ROUTES, landingFor, routesFor } from "desk/core/routes.js";
-
-export const ROUTES = {
-  "#/ropa/pos": {
-    label: "Caja",
-    personas: ["cajero"],
-    load: () => import("desk/verticals/ropa/pos.js"),
-  },
-  "#/ropa/inventario": {
-    label: "Inventario",
-    personas: ["bodeguero", "duena"],
-    load: () => import("desk/verticals/ropa/inventario.js"),
-  },
-  "#/como-funciona": {
-    label: "Cómo funciona",
-    personas: ["cajero", "bodeguero", "duena"],
-    load: () => import("desk/panels/como-funciona.js"),
-  },
-};
-
-export function routesFor(persona) {
-  return Object.entries(ROUTES).filter(([, screen]) => screen.personas.includes(persona));
-}
-
-export function landingFor(persona) {
-  const [hash] = routesFor(persona)[0] || ["#/como-funciona"];
-  return hash;
-}
 
 let current = null;
 

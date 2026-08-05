@@ -6,6 +6,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Added
 
+- `tests/web/test_syntax.py`: verifica con `node --check` que cada módulo del navegador
+  parsea, que ningún archivo importa y declara el mismo nombre, y que todo import resuelve a
+  un archivo que existe. **No es un build** —solo parsea, no genera nada y se salta si node
+  no está—, así que la regla de "lo que se despliega es exactamente lo que se escribió"
+  sigue en pie.
+
 - **D3** Pantalla de caja. El carro es memoria; los totales, el vuelto, el asiento y el
   descuento de stock los resuelve ORDO — si el navegador calculara su propio total habría
   dos verdades y la del navegador sería la equivocada, así que hasta validar se rotula como
@@ -19,6 +25,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
   el cajero: su capability no incluye reportes, y eso es el control funcionando.
 
 ### Fixed
+
+- Una edición dejó `import { ROUTES }` y `export const ROUTES` en el mismo archivo. Es un
+  `SyntaxError`: el navegador no ejecuta nada y **la página queda en blanco, sin mensaje**.
+  Llegó a estar publicado. Los tests del BFF no podían verlo porque nunca miran el
+  JavaScript; ahora hay uno que sí.
 
 - El router mandaba a **todas** las personas a la pantalla de bodega, y el capability token
   del cajero no incluye reportes: la denegación era correcta y el destino no. Ahora cada
