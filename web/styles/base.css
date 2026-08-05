@@ -78,3 +78,35 @@ body.show-log .drawer { transform: none; }
 .reqlog li { padding: .35rem 0; border-bottom: 1px solid var(--line); display: grid; gap: .15rem; }
 .reqlog .meta { color: var(--muted); }
 .reqlog li.bad code { color: var(--bad); }
+
+/* Caja */
+.pos { display: grid; grid-template-columns: 1fr minmax(20rem, 24rem); gap: 1.5rem; align-items: start; }
+@media (max-width: 60rem) { .pos { grid-template-columns: 1fr; } }
+.search { width: 100%; padding: .6rem .8rem; font: inherit; border: 1px solid var(--line);
+  border-radius: var(--radius); background: transparent; color: inherit; }
+.tiles { display: grid; gap: .5rem; margin-top: .75rem;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+.tile { display: grid; gap: .2rem; text-align: left; padding: .7rem;
+  border: 1px solid var(--line); background: transparent; color: inherit; }
+.tile:hover { border-color: var(--accent); }
+.tile span { color: var(--muted); font-family: var(--mono); font-size: .85rem; }
+.cart { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem;
+  position: sticky; top: 1rem; }
+.cart header { display: flex; align-items: baseline; gap: .5rem; }
+.cart header h1 { margin: 0; }
+.shift { margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: .8rem; }
+.lines { list-style: none; padding: 0; margin: .75rem 0; }
+.lines li { display: grid; grid-template-columns: 2.5rem 1fr auto auto; gap: .4rem;
+  align-items: center; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+.lines .qty { font-family: var(--mono); color: var(--muted); }
+.lines .amount { font-family: var(--mono); }
+button.tiny { padding: .1rem .4rem; font-size: .75rem; }
+.total { font-size: 1.1rem; }
+.total small { color: var(--muted); font-size: .75rem; }
+.preview { border: 1px dashed var(--accent); border-radius: var(--radius);
+  padding: .6rem .8rem; margin: .5rem 0; font-size: .9rem; }
+.preview ul { margin: .3rem 0 0; padding-left: 1.1rem; color: var(--muted); }
+.actions { display: flex; gap: .5rem; margin-top: .75rem; }
+.actions button { flex: 1; padding: .6rem; }
+.receipt .big { font-size: 2rem; font-family: var(--mono); margin: .3rem 0; }
+.receipt ul { color: var(--muted); padding-left: 1.1rem; }

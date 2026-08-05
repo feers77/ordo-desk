@@ -6,6 +6,29 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Added
 
+- **D3** Pantalla de caja. El carro es memoria; los totales, el vuelto, el asiento y el
+  descuento de stock los resuelve ORDO — si el navegador calculara su propio total habría
+  dos verdades y la del navegador sería la equivocada, así que hasta validar se rotula como
+  **provisional**. Botón "Simular" que usa `dry_run`: muestra el ticket, el total y el
+  asiento que *harían*, sin gastar numeración. El botón de cobrar se deshabilita mientras
+  vuela y la clave de idempotencia **no se renueva** entre reintentos.
+- **D2** `sim/day_ropa.py`: un día de operación reproducible que habla **por el escritorio**,
+  con la misma cookie y las mismas rutas que el navegador. No es un atajo: convierte al
+  simulador en un test de contrato de la pantalla. Quedarse sin stock se cuenta y se sigue,
+  porque es un desenlace legítimo de un día de tienda. El Z del turno lo pide la dueña, no
+  el cajero: su capability no incluye reportes, y eso es el control funcionando.
+
+### Fixed
+
+- El router mandaba a **todas** las personas a la pantalla de bodega, y el capability token
+  del cajero no incluye reportes: la denegación era correcta y el destino no. Ahora cada
+  pantalla declara a qué personas sirve, y quien no puede entrar no la ve en el menú ni
+  aterriza en ella.
+- `app.js` y `ui/shell.js` se importaban mutuamente. Funcionaba por el orden de evaluación,
+  que es la clase de cosa que deja de funcionar sin avisar; las rutas se mudan a
+  `core/routes.js`.
+- El buscador de la caja perdía el foco en cada tecla porque se repintaba el panel entero.
+
 - `DESK_COOKIE_SECURE`, unidad systemd y notas de despliegue en LAN. La cookie se emite con
   `Secure` por defecto; sobre HTTP plano el navegador no la guarda y el escritorio parece
   roto sin decir por qué, así que apagarlo es una decisión explícita de despliegue —y solo

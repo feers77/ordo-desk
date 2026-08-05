@@ -1,20 +1,43 @@
 /**
  * Router por hash y montaje de pantallas.
  *
- * Sin framework y sin build: cada pantalla exporta `mount(root, ctx)` y, si
- * necesita soltar algo, `unmount()`. El router desmonta la anterior antes de
- * montar la siguiente, que es todo el ciclo de vida que hace falta.
+ * Cada pantalla declara a qué personas sirve. No es cosmética: el capability
+ * token del cajero no incluye reportes, así que mandarlo a la bodega produce un
+ * 403 correcto y una pantalla rota. Quien no puede entrar a una pantalla no la
+ * ve en el menú y no aterriza en ella por defecto.
  */
 
 import { h, render } from "desk/core/dom.js";
 import { session as sessionApi } from "desk/core/http.js";
 import { shell, failure, loading } from "desk/ui/shell.js";
+import { ROUTES, landingFor, routesFor } from "desk/core/routes.js";
 
-const ROUTES = {
-  "#/ropa/inventario": () => import("desk/verticals/ropa/inventario.js"),
-  "#/como-funciona": () => import("desk/panels/como-funciona.js"),
+export const ROUTES = {
+  "#/ropa/pos": {
+    label: "Caja",
+    personas: ["cajero"],
+    load: () => import("desk/verticals/ropa/pos.js"),
+  },
+  "#/ropa/inventario": {
+    label: "Inventario",
+    personas: ["bodeguero", "duena"],
+    load: () => import("desk/verticals/ropa/inventario.js"),
+  },
+  "#/como-funciona": {
+    label: "Cómo funciona",
+    personas: ["cajero", "bodeguero", "duena"],
+    load: () => import("desk/panels/como-funciona.js"),
+  },
 };
-const DEFAULT_ROUTE = "#/ropa/inventario";
+
+export function routesFor(persona) {
+  return Object.entries(ROUTES).filter(([, screen]) => screen.personas.includes(persona));
+}
+
+export function landingFor(persona) {
+  const [hash] = routesFor(persona)[0] || ["#/como-funciona"];
+  return hash;
+}
 
 let current = null;
 
@@ -26,7 +49,7 @@ async function boot() {
     session = await sessionApi.read();
   } catch (error) {
     if (error.code === "DESK_NO_SESSION") {
-      render(app, picker(app));
+      render(app, picker());
       return;
     }
     failure(app, error, boot);
@@ -38,7 +61,7 @@ async function boot() {
   await route(main, ctx);
 }
 
-function picker(app) {
+function picker() {
   const personas = [
     ["cajero", "Vende y cobra en la caja"],
     ["bodeguero", "Recibe, traslada y repone"],
@@ -64,6 +87,7 @@ function picker(app) {
             class: "card",
             onClick: async () => {
               await sessionApi.start(persona);
+              window.location.hash = landingFor(persona);
               await boot();
             },
           },
@@ -76,7 +100,10 @@ function picker(app) {
 }
 
 async function route(main, ctx) {
-  const hash = ROUTES[window.location.hash] ? window.location.hash : DEFAULT_ROUTE;
+  const allowed = routesFor(ctx.session.persona).map(([hash]) => hash);
+  const hash = allowed.includes(window.location.hash)
+    ? window.location.hash
+    : landingFor(ctx.session.persona);
   if (current?.unmount) {
     try {
       current.unmount();
@@ -85,7 +112,7 @@ async function route(main, ctx) {
     }
   }
   loading(main);
-  const screen = await ROUTES[hash]();
+  const screen = await ROUTES[hash].load();
   current = screen;
   await screen.mount(main, ctx);
 }

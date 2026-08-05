@@ -3,11 +3,7 @@
 import { h, clear } from "desk/core/dom.js";
 import { humanize } from "desk/core/errors.js";
 import { bus } from "desk/core/bus.js";
-
-const SCREENS = [
-  { hash: "#/ropa/inventario", label: "Inventario" },
-  { hash: "#/como-funciona", label: "Cómo funciona" },
-];
+import { routesFor } from "desk/core/routes.js";
 
 export function shell(root, ctx) {
   const main = h("main", { class: "content" });
@@ -20,8 +16,8 @@ export function shell(root, ctx) {
     h(
       "nav",
       {},
-      ...SCREENS.map((screen) =>
-        h("a", { href: screen.hash, class: "nav-link" }, screen.label),
+      ...routesFor(ctx.session.persona).map(([hash, screen]) =>
+        h("a", { href: hash, class: "nav-link" }, screen.label),
       ),
     ),
     h(
