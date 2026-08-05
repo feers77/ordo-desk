@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORDO — escritorio</title>
+<link rel="stylesheet" href="/web/styles/base.css">
+<!--
+  Un import map de cinco líneas en vez de un bundler. Deja los imports
+  absolutos y legibles (`desk/core/http.js`) sin cadenas de "../../", y no
+  necesita build. Tiene que ir antes del primer <script type="module">.
+-->
+<script type="importmap">
+{"imports": {"desk/": "/web/"}}
+</script>
+</head>
+<body>
+<div id="app" class="shell">
+  <noscript>
+    Este escritorio necesita JavaScript. La API de ORDO no: todo lo que se ve
+    aquí se puede hacer con <code>curl</code>.
+  </noscript>
+</div>
+<script type="module" src="/web/app.js"></script>
+</body>
+</html>
