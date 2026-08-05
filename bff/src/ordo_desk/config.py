@@ -83,8 +83,9 @@ def load_settings() -> Settings:
         api_url=os.environ.get("ORDO_API_URL", "http://127.0.0.1:8000").rstrip("/"),
         iam_url=os.environ.get("ORDO_IAM_URL", "http://127.0.0.1:8002").rstrip("/"),
         oidc_token_url=os.environ.get("OIDC_TOKEN_URL", ""),
-        oidc_client_id=os.environ.get("OIDC_CLIENT_ID", "ordo-desk"),
+        oidc_client_id=os.environ.get("OIDC_CLIENT_ID", "ordo-cli"),
         session_secret=_secret(),
         web_root=Path(os.environ.get("DESK_WEB_ROOT", "web")).resolve(),
         tenant=tenant,
+        credentials=credentials,
     )

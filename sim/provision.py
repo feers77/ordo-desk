@@ -97,7 +97,7 @@ async def provision(tenant: str, owner_token: str) -> None:
                 json={
                     "display_name": f"escritorio-{persona}",
                     "model": "ordo-desk",
-                    "autonomy_level": "operator",
+                    "autonomy_level": "execute_approve",
                 },
             )
             if registered.status_code != 201:
