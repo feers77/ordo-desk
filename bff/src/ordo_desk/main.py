@@ -99,7 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             max_age=config.session_ttl_s,
             httponly=True,
             samesite="strict",
-            secure=True,
+            secure=config.cookie_secure,
             path="/",
         )
         return response

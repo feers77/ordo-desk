@@ -44,7 +44,24 @@ make provision TENANT=ropa   # crea agentes y capacidades en IAM, una sola vez
 make dev                     # http://127.0.0.1:8100
 ```
 
-El tenant se siembra desde el core con `make seed TENANT=ropa`.
+El tenant se siembra desde el core con `make seed TENANT=ropa`, y su primera
+usuaria con `tools/seed_iam_user.py`.
+
+## Servirlo en una red local
+
+`infra/ordo-desk.service` es la unidad systemd que usa el despliegue de
+referencia: lee `/etc/ordo-desk/env` (modo 0600) y escucha en el puerto 8100.
+
+**Sobre HTTP plano hay que apagar `DESK_COOKIE_SECURE`**, o el navegador ni
+siquiera guarda la cookie de sesión y nada funciona. El costo es que la cookie
+viaja en claro por la red local: es aceptable en una LAN de confianza y no lo
+es en Internet. Delante de un proxy con TLS, déjalo en `1`.
+
+El puerto debe abrirse **solo a la red local**:
+
+```bash
+ufw allow proto tcp from 192.168.1.0/24 to any port 8100
+```
 
 ## Licencia
 

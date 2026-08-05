@@ -6,6 +6,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Added
 
+- `DESK_COOKIE_SECURE`, unidad systemd y notas de despliegue en LAN. La cookie se emite con
+  `Secure` por defecto; sobre HTTP plano el navegador no la guarda y el escritorio parece
+  roto sin decir por qué, así que apagarlo es una decisión explícita de despliegue —y solo
+  un `0` literal la apaga, no un valor vacío ni un typo—. El costo, dicho sin rodeos: la
+  cookie viaja en claro por la red local.
+
 - **D0/D1** Andamio del escritorio e identidad. BFF en FastAPI que sirve `web/` desde el
   mismo origen —lo que hace innecesario pedirle CORS al core— y presta identidad: un
   `TokenBroker` que custodia el secreto del agente, obtiene el token OIDC del dueño que

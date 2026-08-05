@@ -56,3 +56,17 @@ class TestLoadSettings:
         monkeypatch.delenv("DESK_SESSION_SECRET", raising=False)
         with pytest.raises(RuntimeError, match="DESK_SESSION_SECRET"):
             load_settings()
+
+
+class TestCookieSecurity:
+    def test_secure_by_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        apply(monkeypatch, FULL)
+        monkeypatch.delenv("DESK_COOKIE_SECURE", raising=False)
+        assert load_settings().cookie_secure is True
+
+    def test_only_an_explicit_zero_turns_it_off(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Apagarlo tiene que costar una decisión, no un valor vacío o un typo."""
+        apply(monkeypatch, {**FULL, "DESK_COOKIE_SECURE": "0"})
+        assert load_settings().cookie_secure is False
+        apply(monkeypatch, {**FULL, "DESK_COOKIE_SECURE": "false"})
+        assert load_settings().cookie_secure is True

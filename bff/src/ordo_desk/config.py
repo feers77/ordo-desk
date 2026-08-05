@@ -42,6 +42,11 @@ class Settings:
     tenant: str
     credentials: dict[tuple[str, str], AgentCredentials] = field(default_factory=dict)
     session_ttl_s: int = 8 * 3600
+    # La cookie se emite con Secure por defecto. En una LAN sin TLS hay que
+    # apagarlo o el navegador ni siquiera la guarda —y entonces nada funciona—,
+    # a cambio de que viaje en claro por la red local. Es una decisión de
+    # despliegue y por eso es explícita, no un silencio.
+    cookie_secure: bool = True
     request_timeout_s: float = 15.0
     # El core acepta hasta 500 filas por página; para una pantalla eso ya es un
     # error de diseño, así que el BFF corta antes.
@@ -88,4 +93,5 @@ def load_settings() -> Settings:
         web_root=Path(os.environ.get("DESK_WEB_ROOT", "web")).resolve(),
         tenant=tenant,
         credentials=credentials,
+        cookie_secure=os.environ.get("DESK_COOKIE_SECURE", "1") != "0",
     )
