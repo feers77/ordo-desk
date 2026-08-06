@@ -42,6 +42,21 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Fixed
 
+- **El botón "Simular" nunca funcionó.** La simulación corre sobre un ticket real y exige su
+  cobro, pero el cobro solo se creaba en la ruta de cobrar: simular respondía siempre
+  `POS_PAYMENT_INSUFFICIENT`. Peor, la pantalla trataba un `would_return` vacío como éxito,
+  así que mostraba un preview con campos indefinidos en vez de decir que fallaría. Y cada
+  intento dejaba un borrador huérfano, que es lo que bloquea el cierre del turno.
+  Ahora el carro se **materializa** —cabecera, líneas y cobro— antes de simular o cobrar; si
+  el carro cambia después, el ticket se cancela y se rehace, porque cobrar líneas viejas es
+  peor que fallar. `validations` vacío es éxito y con contenido son los motivos, que la
+  pantalla muestra tal cual. Aparece "Descartar", que cancela el borrador de verdad.
+- Se agrega el cobro con medio elegible y el importe recibido en efectivo, que es de donde
+  sale el vuelto: sin eso el vuelto siempre era cero y la mitad del punto se perdía.
+- `tests/e2e/test_pos_flow.py` reproduce la secuencia exacta de la pantalla contra el
+  escritorio vivo, **incluida la simulación**. Los tests del BFF no podían verlo —no conocen
+  el flujo— y `sim/day_ropa.py` tampoco, porque vende sin simular.
+
 - `crypto.randomUUID` **solo existe en contextos seguros** (HTTPS o localhost). Servido en
   una IP de la red local sobre HTTP plano no está definido, y el escritorio se caía justo al
   cobrar, que es donde la clave de idempotencia hace falta. Se compone el UUID con
