@@ -110,3 +110,38 @@ button.tiny { padding: .1rem .4rem; font-size: .75rem; }
 .actions button { flex: 1; padding: .6rem; }
 .receipt .big { font-size: 2rem; font-family: var(--mono); margin: .3rem 0; }
 .receipt ul { color: var(--muted); padding-left: 1.1rem; }
+
+/* Reposición */
+.reorder { border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .9rem 1rem; margin: .9rem 0; }
+.reorder header { display: flex; align-items: baseline; gap: .6rem; }
+.reorder h2 { font-size: 1.05rem; margin: 0; }
+.variants { display: grid; gap: .3rem; margin: .6rem 0; }
+.variant { display: grid; grid-template-columns: 9rem 7rem 7rem 1fr auto; gap: .5rem;
+  align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--line); }
+.variant .num { font-family: var(--mono); color: var(--muted); font-size: .85rem; }
+.status .done { color: var(--accent); font-family: var(--mono); font-size: .85rem; }
+.status .muted { color: var(--muted); font-size: .85rem; }
+.blocked { border-left: 3px solid var(--bad); padding: .5rem 0 .5rem .8rem; margin-top: 1rem; }
+.blocked p { color: var(--muted); margin: .3rem 0; }
+.blocked ul { color: var(--muted); padding-left: 1.1rem; margin: .3rem 0; }
+@media (max-width: 46rem) { .variant { grid-template-columns: 1fr auto; } }
+
+/* Telegram */
+.telegram { position: fixed; right: 0; top: 0; bottom: 0; width: min(26rem, 92vw);
+  background: var(--bg); border-left: 1px solid var(--line); padding: 1rem;
+  overflow: auto; transform: translateX(100%); transition: transform .18s ease; z-index: 5; }
+body.show-chat .telegram { transform: none; }
+.telegram header { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .8rem; }
+.telegram .muted { color: var(--muted); font-size: .85rem; }
+.thread { display: grid; gap: .7rem; }
+.bubble { border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .7rem .8rem; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.bubble pre { margin: 0; font-family: var(--mono); font-size: .82rem;
+  white-space: pre-wrap; word-break: break-word; }
+.inline-keyboard { display: flex; gap: .4rem; margin-top: .6rem; }
+button.inline { flex: 1; padding: .4rem; border: 1px solid var(--line);
+  background: transparent; color: inherit; font-size: .9rem; }
+button.inline:hover:not(:disabled) { border-color: var(--accent); }
+button.inline:disabled { opacity: .5; cursor: default; }
+.resolved { margin: .5rem 0 0; color: var(--accent); font-size: .85rem; }

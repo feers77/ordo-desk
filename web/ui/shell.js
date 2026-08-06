@@ -4,6 +4,7 @@ import { h, clear } from "desk/core/dom.js";
 import { humanize } from "desk/core/errors.js";
 import { bus } from "desk/core/bus.js";
 import { routesFor } from "desk/core/routes.js";
+import { chatPanel, connect } from "desk/telegram/chat.js";
 
 export function shell(root, ctx) {
   const main = h("main", { class: "content" });
@@ -32,6 +33,11 @@ export function shell(root, ctx) {
       { class: "ghost", onClick: () => document.body.classList.toggle("show-log") },
       "peticiones",
     ),
+    h(
+      "button",
+      { class: "ghost", onClick: () => document.body.classList.toggle("show-chat") },
+      "Telegram",
+    ),
   );
 
   bus.on("http", (entry) => {
@@ -49,7 +55,11 @@ export function shell(root, ctx) {
     header,
     main,
     h("aside", { class: "drawer" }, h("h2", {}, "Peticiones a la API"), log),
+    chatPanel(),
   );
+  // El chat escucha desde que se abre el escritorio: una aprobación puede
+  // llegar mientras el cajero está en otra pantalla.
+  connect();
   return main;
 }
 

@@ -14,6 +14,13 @@ from typing import Any
 import httpx
 from fastapi import Request, Response
 
+from ordo_desk.approvals import (
+    ApprovalBroker,
+    ApprovalFailedError,
+    fingerprint,
+    route_to_operation,
+    sealed_operation,
+)
 from ordo_desk.config import Settings
 from ordo_desk.session import Session
 from ordo_desk.tokens import TokenBroker, TokenError
@@ -120,10 +127,17 @@ def forward_headers(request: Request, token: str, tenant: str) -> dict[str, str]
 
 
 class ApiProxy:
-    def __init__(self, settings: Settings, broker: TokenBroker, client: httpx.AsyncClient) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        broker: TokenBroker,
+        client: httpx.AsyncClient,
+        approvals: ApprovalBroker | None = None,
+    ) -> None:
         self._settings = settings
         self._broker = broker
         self._client = client
+        self._approvals = approvals or ApprovalBroker(settings, client)
 
     async def forward(self, request: Request, path: str, session: Session) -> Response:
         target = check_path(path)
@@ -143,7 +157,14 @@ class ApiProxy:
                 hint="Revisa la provisión de identidades del escritorio.",
             ) from exc
 
-        upstream = await self._send(request, target, params, body, token, session)
+        approval_id = self._approval_for(target, body, session)
+        upstream = await self._send(
+            request, target, params, body, token, session, approval=approval_id
+        )
+        if upstream.status_code == 403:
+            upstream = await self._resolve_approval(
+                request, target, params, body, token, session, upstream
+            )
         if upstream.status_code == 401:
             # El token murió antes de lo previsto. Un reintento, no más: si el
             # segundo también falla, el problema no es el token.
@@ -164,6 +185,81 @@ class ApiProxy:
             media_type=upstream.headers.get("content-type"),
         )
 
+    # ------------------------------------------------------------ aprobaciones
+
+    def _intent(
+        self, target: str, body: bytes, session: Session
+    ) -> tuple[str, dict[str, Any]] | None:
+        """La huella de esta intención, si es una acción que puede pedir permiso."""
+        route = route_to_operation(target)
+        if route is None:
+            return None
+        model, action, record_id = route
+        try:
+            parsed = json.loads(body) if body else {}
+        except ValueError:
+            return None
+        operation = sealed_operation(model, action, record_id, parsed)
+        return fingerprint(session.tenant, session.persona, operation), operation
+
+    def _approval_for(self, target: str, body: bytes, session: Session) -> str | None:
+        intent = self._intent(target, body, session)
+        return None if intent is None else self._approvals.known(intent[0])
+
+    async def _resolve_approval(
+        self,
+        request: Request,
+        target: str,
+        params: QueryParams,
+        body: bytes,
+        token: str,
+        session: Session,
+        upstream: httpx.Response,
+    ) -> httpx.Response:
+        """Ante IAM_APPROVAL_REQUIRED, pide el permiso y devuelve su id.
+
+        No se espera aquí a que alguien apruebe: bloquear el request dejaría al
+        cajero mirando una pantalla congelada durante minutos. El navegador ve
+        el 403 con el id, el mensaje aparece en Telegram, y cuando se aprueba
+        vuelve a enviar exactamente el mismo request —que ahora sí lleva la
+        cabecera.
+        """
+        try:
+            payload = upstream.json()
+        except ValueError:
+            return upstream
+        error = payload.get("error", {}) if isinstance(payload, dict) else {}
+        if error.get("code") != "IAM_APPROVAL_REQUIRED":
+            return upstream
+        intent = self._intent(target, body, session)
+        if intent is None:
+            return upstream
+        key, operation = intent
+
+        try:
+            created = await self._approvals.request(token=token, key=key, operation=operation)
+        except (ApprovalFailedError, httpx.HTTPError) as exc:
+            raise ProxyRefusedError(
+                "DESK_APPROVAL_FAILED",
+                f"No se pudo pedir la aprobación: {exc}",
+                status_code=502,
+                hint="Revisa que el servicio IAM esté disponible.",
+            ) from exc
+
+        if created.get("status") == "approved":
+            # Ya estaba aprobada de antes: se reintenta en el acto.
+            return await self._send(
+                request, target, params, body, token, session, approval=created["approval_id"]
+            )
+
+        error["approval_id"] = created["approval_id"]
+        error["approval_status"] = created.get("status")
+        return httpx.Response(
+            upstream.status_code,
+            json=payload,
+            headers={"content-type": "application/json"},
+        )
+
     async def _send(
         self,
         request: Request,
@@ -172,12 +268,19 @@ class ApiProxy:
         body: bytes,
         token: str,
         session: Session,
+        *,
+        approval: str | None = None,
     ) -> httpx.Response:
+        headers = forward_headers(request, token, session.tenant)
+        if approval:
+            # La cabecera la pone el BFF, nunca el cliente: si el navegador
+            # pudiera fijarla, presentaría aprobaciones ajenas.
+            headers["X-Ordo-Approval"] = approval
         return await self._client.request(
             request.method,
             f"{self._settings.api_url}{target}",
             params=params,
             content=body or None,
-            headers=forward_headers(request, token, session.tenant),
+            headers=headers,
             timeout=self._settings.request_timeout_s,
         )

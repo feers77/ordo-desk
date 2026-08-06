@@ -6,6 +6,22 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/) + Conventional Commi
 
 ### Added
 
+- **D5** Chat de Telegram fiel y coreografía de aprobaciones. El escritorio **no compone ni
+  un solo carácter** del mensaje: lo recibe ya armado por IAM y pinta su texto y sus
+  botones. Pulsar uno tampoco firma nada — se reinyecta el `callback_data` que IAM firmó,
+  tal cual, a su webhook real, y quien verifica la firma y exige que el aprobador sea el
+  dueño del agente sigue siendo IAM. Es fiel por construcción y no por disciplina: si cambia
+  el formato del mensaje, la pantalla lo muestra cambiado sin que nadie la toque.
+  Ante `IAM_APPROVAL_REQUIRED` el BFF crea la solicitud con el token del agente sellando la
+  operación exacta que se reintentará, y **no bloquea**: devolver el id y dejar que el
+  navegador reenvíe deja al cajero atendiendo en vez de mirando una pantalla congelada.
+  El emisor del emulador se declara por red (`DESK_TELEGRAM_SENDERS`) y se compara como
+  dirección IP, nunca por prefijo de texto — "172.1" dejaría entrar a "172.18.0.99".
+- **D4** Pantalla de reposición: alertas agrupadas por modelo y desglosadas por talla, con
+  el traslado desde bodega en un botón. Los bloqueados se listan aparte, no se esconden.
+- SSE en `/desk/events` para lo que **nace en el escritorio**. Los eventos de negocio son de
+  ORDO y llegarán por webhook; mezclarlos aquí haría creer que el escritorio los origina.
+
 - `tests/web/test_syntax.py`: verifica con `node --check` que cada módulo del navegador
   parsea, que ningún archivo importa y declara el mismo nombre, y que todo import resuelve a
   un archivo que existe. **No es un build** —solo parsea, no genera nada y se salta si node

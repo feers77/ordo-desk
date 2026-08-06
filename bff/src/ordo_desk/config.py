@@ -47,6 +47,15 @@ class Settings:
     # a cambio de que viaje en claro por la red local. Es una decisión de
     # despliegue y por eso es explícita, no un silencio.
     cookie_secure: bool = True
+    # Quién puede inyectar mensajes en el chat de la demo. El emisor legítimo
+    # es el worker de IAM; si corre en un contenedor, su IP no es la de
+    # loopback y hay que declararla. Ampliar esta lista es dejar entrar a
+    # quien esté en esa red, así que se declara y no se adivina.
+    telegram_senders: tuple[str, ...] = ("127.0.0.1", "::1")
+    # El mismo secreto que IAM exige en su webhook. Se declara aquí y no se lee
+    # del entorno a mitad de una función: un valor de configuración escondido
+    # dentro de la lógica es un valor que alguien olvida al desplegar.
+    telegram_webhook_secret: str = ""
     request_timeout_s: float = 15.0
     # El core acepta hasta 500 filas por página; para una pantalla eso ya es un
     # error de diseño, así que el BFF corta antes.
@@ -94,4 +103,12 @@ def load_settings() -> Settings:
         tenant=tenant,
         credentials=credentials,
         cookie_secure=os.environ.get("DESK_COOKIE_SECURE", "1") != "0",
+        telegram_senders=_senders(),
+        telegram_webhook_secret=os.environ.get("TELEGRAM_WEBHOOK_SECRET", ""),
     )
+
+
+def _senders() -> tuple[str, ...]:
+    raw = os.environ.get("DESK_TELEGRAM_SENDERS", "")
+    declared = tuple(piece.strip() for piece in raw.split(",") if piece.strip())
+    return declared or ("127.0.0.1", "::1")

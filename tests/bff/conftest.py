@@ -29,6 +29,10 @@ class FakeOrdo:
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
+        if "/iam/v1/approvals" in path:
+            return httpx.Response(
+                201, json={"approval_id": "apr-1", "status": "pending", "operation_hash": "h"}
+            )
         if path.endswith("/iam/v1/token"):
             self.token_calls += 1
             return httpx.Response(
@@ -71,8 +75,10 @@ def settings() -> Settings:
 
 @pytest.fixture
 async def client(settings: Settings, ordo: FakeOrdo):
+    from ordo_desk.events import EventBus
     from ordo_desk.main import create_app
     from ordo_desk.proxy import ApiProxy
+    from ordo_desk.telegram_gw import TelegramGateway
     from ordo_desk.tokens import TokenBroker
 
     app = create_app(settings)
@@ -81,9 +87,38 @@ async def client(settings: Settings, ordo: FakeOrdo):
     app.state.client = upstream
     app.state.broker = TokenBroker(settings, upstream)
     app.state.proxy = ApiProxy(settings, app.state.broker, upstream)
+    app.state.bus = EventBus()
+    app.state.telegram = TelegramGateway(settings, app.state.bus, upstream)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="https://desk.test"
+    ) as browser:
+        browser.app = app  # type: ignore[attr-defined]
+        yield browser
+    await upstream.aclose()
+
+
+@pytest.fixture
+async def remote_client(settings: Settings, ordo: FakeOrdo):
+    """Un navegador que no viene de la propia máquina.
+
+    `ASGITransport` se presenta como 127.0.0.1 por defecto, así que sin fijarlo
+    el guardia del emulador de Telegram pasaría siempre y el test no probaría
+    nada.
+    """
+    from ordo_desk.events import EventBus
+    from ordo_desk.main import create_app
+    from ordo_desk.telegram_gw import TelegramGateway
+
+    app = create_app(settings)
+    upstream = httpx.AsyncClient(transport=httpx.MockTransport(ordo.handler))
+    app.state.client = upstream
+    app.state.bus = EventBus()
+    app.state.telegram = TelegramGateway(settings, app.state.bus, upstream)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app, client=("10.0.0.9", 40000)),
+        base_url="https://desk.test",
     ) as browser:
         yield browser
     await upstream.aclose()

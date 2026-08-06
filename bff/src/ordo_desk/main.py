@@ -7,6 +7,7 @@ ORDO; si una pantalla necesita datos, los pide por `/desk/api/*`.
 
 from __future__ import annotations
 
+import ipaddress
 import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -15,11 +16,13 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from ordo_desk.config import PERSONAS, Settings, load_settings
+from ordo_desk.events import EventBus
 from ordo_desk.proxy import ApiProxy, ProxyRefusedError
 from ordo_desk.session import COOKIE_NAME, new_session, sign, verify
+from ordo_desk.telegram_gw import TelegramGateway
 from ordo_desk.tokens import TokenBroker
 
 
@@ -32,6 +35,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.client = client
             app.state.broker = TokenBroker(config, client)
             app.state.proxy = ApiProxy(config, app.state.broker, client)
+            app.state.bus = EventBus()
+            app.state.telegram = TelegramGateway(config, app.state.bus, client)
             yield
 
     app = FastAPI(title="ordo-desk", lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -137,8 +142,97 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 hint="Revisa que ordo-api esté arriba.",
             ).to_response()
 
+    @app.get("/desk/events")
+    async def events(request: Request) -> Response:
+        """Lo que nace en el escritorio, empujado al navegador."""
+        if current_session(request) is None:
+            return ProxyRefusedError(
+                "DESK_NO_SESSION", "Sesión ausente", status_code=401
+            ).to_response()
+        since = int(request.query_params.get("since", "0") or 0)
+        return StreamingResponse(
+            request.app.state.bus.stream(since),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+
+    @app.post("/desk/tg/bot{token}/sendMessage")
+    async def telegram_send(token: str, request: Request) -> Response:
+        """Recibe lo que IAM creyó estar mandándole a Telegram.
+
+        Solo desde la propia máquina: el emisor es el worker de IAM, no un
+        navegador, y aceptarlo desde fuera dejaría a cualquiera inyectar
+        mensajes en el chat de la demo.
+        """
+        client_host = request.client.host if request.client else ""
+        if not _allowed_sender(client_host, config.telegram_senders):
+            return ProxyRefusedError(
+                "DESK_TELEGRAM_FOREIGN",
+                "El emulador de Telegram solo acepta al emisor local",
+                status_code=403,
+            ).to_response()
+        del token  # el token del bot no se valida: el receptor es el emulador
+        payload = await _json(request)
+        return JSONResponse(request.app.state.telegram.receive(payload))
+
+    @app.get("/desk/tg/history")
+    async def telegram_history(request: Request) -> Response:
+        if current_session(request) is None:
+            return ProxyRefusedError(
+                "DESK_NO_SESSION", "Sesión ausente", status_code=401
+            ).to_response()
+        return JSONResponse({"messages": request.app.state.telegram.history()})
+
+    @app.post("/desk/tg/click")
+    async def telegram_click(request: Request) -> Response:
+        """El navegador pulsó un botón inline.
+
+        El escritorio no firma nada: reinyecta el `callback_data` que IAM firmó,
+        tal cual, al webhook real. Quien verifica la firma y exige que el
+        aprobador sea el dueño del agente sigue siendo IAM.
+        """
+        session = current_session(request)
+        if session is None:
+            return ProxyRefusedError(
+                "DESK_NO_SESSION", "Sesión ausente", status_code=401
+            ).to_response()
+        body = await _json(request)
+        try:
+            resolved = await request.app.state.telegram.click(
+                int(body.get("message_id", 0)), int(body.get("button_index", 0))
+            )
+        except (LookupError, ValueError) as exc:
+            return ProxyRefusedError(
+                "DESK_TELEGRAM_UNKNOWN_BUTTON", str(exc), status_code=404
+            ).to_response()
+        return JSONResponse(resolved)
+
     _mount_web(app, config.web_root)
     return app
+
+
+def _allowed_sender(host: str, declared: tuple[str, ...]) -> bool:
+    """Coincidencia exacta o por red declarada, nunca por prefijo de texto.
+
+    Comparar cadenas dejaría pasar "172.18.0.99" con una regla "172.1", que es
+    la clase de error que abre una puerta sin que nadie lo note.
+    """
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    for entry in declared:
+        try:
+            if "/" in entry:
+                if address in ipaddress.ip_network(entry, strict=False):
+                    return True
+            elif address == ipaddress.ip_address(entry):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 async def _json(request: Request) -> dict[str, Any]:

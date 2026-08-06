@@ -16,6 +16,11 @@ export const ROUTES = {
     personas: ["cajero"],
     load: () => import("desk/verticals/ropa/pos.js"),
   },
+  "#/ropa/reposicion": {
+    label: "Reposición",
+    personas: ["bodeguero", "duena"],
+    load: () => import("desk/verticals/ropa/reposicion.js"),
+  },
   "#/ropa/inventario": {
     label: "Inventario",
     personas: ["bodeguero", "duena"],
